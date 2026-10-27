@@ -25,18 +25,28 @@ import {
 	Download,
 	UserPlus,
 	Info,
+	LogOut,
 } from 'lucide-react';
 import {calculatePeopleAnalytics, EmployeeRow, MetricResult} from '@/lib/engine/analytics';
+import {logoutAction} from '@/app/login/actions';
 
 interface Props {
 	employees: EmployeeRow[];
 	requisitionsCount: number;
 	candidatesCount: number;
+	userEmail?: string;
+	isHrAdmin?: boolean;
 }
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
 
-export default function DashboardClient({employees, requisitionsCount, candidatesCount}: Props) {
+export default function DashboardClient({
+	employees,
+	requisitionsCount,
+	candidatesCount,
+	userEmail = 'Internal User',
+	isHrAdmin = true,
+}: Props) {
 	const [activeTab, setActiveTab] = useState<
 		'overview' | 'turnover' | 'newhire' | 'department' | 'quality'
 	>('overview');
@@ -143,25 +153,44 @@ export default function DashboardClient({employees, requisitionsCount, candidate
 						</p>
 					</div>
 
-					<div className="flex items-center gap-2.5">
+					<div className="flex flex-wrap items-center gap-2.5">
+						<span className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-xs font-medium text-gray-600 dark:text-gray-300">
+							{userEmail} ({isHrAdmin ? 'HR Admin' : 'BOD Viewer'})
+						</span>
+
 						<button
 							onClick={handleExportCSV}
 							className="px-3.5 py-2 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
 							<Download className="w-4 h-4" />
 							Export CSV
 						</button>
-						<Link
-							href="/admin/employees"
-							className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
-							<UserPlus className="w-4 h-4" />
-							Kelola Data Karyawan
-						</Link>
-						<Link
-							href="/admin/import"
-							className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
-							<Upload className="w-4 h-4" />
-							Import / Update Excel
-						</Link>
+
+						{isHrAdmin && (
+							<>
+								<Link
+									href="/admin/employees"
+									className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+									<UserPlus className="w-4 h-4" />
+									Kelola Karyawan
+								</Link>
+								<Link
+									href="/admin/import"
+									className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+									<Upload className="w-4 h-4" />
+									Import Excel
+								</Link>
+							</>
+						)}
+
+						<form action={logoutAction}>
+							<button
+								type="submit"
+								className="px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+								title="Keluar">
+								<LogOut className="w-4 h-4" />
+								Logout
+							</button>
+						</form>
 					</div>
 				</div>
 
