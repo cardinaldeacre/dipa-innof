@@ -1,12 +1,15 @@
 import dns from 'node:dns';
 import {Suspense} from 'react';
 import {Loader2} from 'lucide-react';
+import {connection} from 'next/server';
 import {createClient} from '@/lib/supabase/server';
 import EmployeeManagerClient from '@/components/EmployeeManagerClient';
 
 dns.setDefaultResultOrder('ipv4first');
 
 async function EmployeeDataFetcher() {
+	await connection();
+
 	const supabase = await createClient();
 	const {data: employees} = await supabase
 		.from('employees')
