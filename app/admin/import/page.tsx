@@ -1,7 +1,7 @@
 'use client';
 
 import {useActionState} from 'react';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import {Loader2, CheckCircle, AlertCircle, Database, Download} from 'lucide-react';
 import {processExcelImport} from './actions';
 
@@ -21,11 +21,93 @@ export default function ImportPage() {
 	const handleDownloadTemplate = () => {
 		const wb = XLSX.utils.book_new();
 
+		const guideData = [
+			{
+				'Nama Sheet': 'UMUM (Semua Sheet)',
+				'Nama Kolom': 'Semua Kolom Tanggal',
+				'Aturan / Nilai yang Diizinkan':
+					'Gunakan format YYYY-MM-DD (Contoh: 2026-01-15) atau DD Bulan YYYY (Contoh: 15 Januari 2026)',
+				Keterangan: 'Jangan gunakan tanda garis miring terbalik atau teks bebas.',
+			},
+			{
+				'Nama Sheet': 'UMUM (Semua Sheet)',
+				'Nama Kolom': 'Baris Contoh (CONTOH_...)',
+				'Aturan / Nilai yang Diizinkan': 'Boleh dihapus atau dibiarkan',
+				Keterangan:
+					'Sistem otomatis mengabaikan baris yang ID/Namanya diawali kata CONTOH_ saat di-upload.',
+			},
+			{
+				'Nama Sheet': 'Employee Master',
+				'Nama Kolom': 'Status',
+				'Aturan / Nilai yang Diizinkan': 'Active | Inactive',
+				Keterangan: 'Jika Exit Date diisi, sistem otomatis mengubah status menjadi Inactive.',
+			},
+			{
+				'Nama Sheet': 'Employee Master',
+				'Nama Kolom': 'Employee Status',
+				'Aturan / Nilai yang Diizinkan': 'Permanent | Contract | Probation | Internship',
+				Keterangan: 'Status ikatan kerja karyawan saat ini.',
+			},
+			{
+				'Nama Sheet': 'Employee Master',
+				'Nama Kolom': 'Employment Type',
+				'Aturan / Nilai yang Diizinkan': 'Full-time | Part-time | Contract | Internship',
+				Keterangan: 'Digunakan untuk filter tipe pekerjaan di Dashboard.',
+			},
+			{
+				'Nama Sheet': 'Employee Master',
+				'Nama Kolom': 'Probation Outcome',
+				'Aturan / Nilai yang Diizinkan': 'Passed | Failed | Pending | Not Applicable',
+				Keterangan: 'Menentukan perhitungan Probation Pass Rate.',
+			},
+			{
+				'Nama Sheet': 'Employee Master & Exit Interview',
+				'Nama Kolom': 'Exit Type',
+				'Aturan / Nilai yang Diizinkan':
+					'Voluntary | Involuntary | Contract Non-Renewal | Probation Non-Continuation',
+				Keterangan: 'Wajib diisi jika karyawan memiliki Exit Date.',
+			},
+			{
+				'Nama Sheet': 'Employee Master & Exit Interview',
+				'Nama Kolom': 'Exit Reason / Reason',
+				'Aturan / Nilai yang Diizinkan':
+					'Compensation | Career Growth | Workload | Management | Culture | Personal | Performance | Other',
+				Keterangan: 'Digunakan untuk grafik analisis alasan resign.',
+			},
+			{
+				'Nama Sheet': 'Requisition Summary',
+				'Nama Kolom': 'Status',
+				'Aturan / Nilai yang Diizinkan': 'Open | Filled | On Hold | Cancelled',
+				Keterangan: 'Status lowongan kerja.',
+			},
+			{
+				'Nama Sheet': 'Recruitment Database',
+				'Nama Kolom': 'Stage',
+				'Aturan / Nilai yang Diizinkan':
+					'Applied | Screening | Interview | Offer | Hired | Rejected',
+				Keterangan: 'Tahapan rekrutmen pelamar.',
+			},
+			{
+				'Nama Sheet': 'Performance Database',
+				'Nama Kolom': 'Rating',
+				'Aturan / Nilai yang Diizinkan':
+					'Exceeds Expectations | Meets Expectations | Needs Improvement | Unsatisfactory',
+				Keterangan: 'Skor KPI menggunakan skala angka desimal 1.0 - 5.0.',
+			},
+			{
+				'Nama Sheet': 'Training Database',
+				'Nama Kolom': 'Status',
+				'Aturan / Nilai yang Diizinkan': 'Completed | In Progress | Not Started',
+				Keterangan: 'Status penyelesaian materi pelatihan.',
+			},
+		];
+
 		const sheetsConfig: Record<string, any[]> = {
+			'📋 Panduan & Kamus Data': guideData,
 			'Employee Master': [
 				{
-					'Employee ID': 'DP2601001',
-					'Employee Name': 'Budi Santoso',
+					'Employee ID': 'CONTOH_DP2601001',
+					'Employee Name': 'CONTOH_Budi Santoso (Karyawan Aktif)',
 					'Job Title': 'UI/UX Designer',
 					Department: 'Design',
 					Status: 'Active',
@@ -33,11 +115,11 @@ export default function ImportPage() {
 					'Employment Type': 'Full-time',
 					Gender: 'Male',
 					'Join Date': '2026-01-15',
-					'Years of Services': 0.5,
+					'Years of Services': 0.8,
 					'Probation Start Date': '2026-01-15',
 					'Probation End Date': '2026-04-15',
 					'Probation Outcome': 'Passed',
-					'Contract Start Date': '',
+					'Contract Start Date': '2026-04-16',
 					'Contract (I)': '',
 					'Contract (II)': '',
 					'Contract (III)': '',
@@ -45,32 +127,60 @@ export default function ImportPage() {
 					'Exit Type': '',
 					'Exit Reason': '',
 				},
+				{
+					'Employee ID': 'CONTOH_DP2502002',
+					'Employee Name': 'CONTOH_Siti Aminah (Karyawan Resign)',
+					'Job Title': 'Frontend Developer',
+					Department: 'Development',
+					Status: 'Inactive',
+					'Employee Status': 'Contract',
+					'Employment Type': 'Full-time',
+					Gender: 'Female',
+					'Join Date': '2025-02-01',
+					'Years of Services': 1.2,
+					'Probation Start Date': '2025-02-01',
+					'Probation End Date': '2025-05-01',
+					'Probation Outcome': 'Passed',
+					'Contract Start Date': '2025-05-02',
+					'Contract (I)': '2026-05-02',
+					'Contract (II)': '',
+					'Contract (III)': '',
+					'Exit Date': '2026-04-20',
+					'Exit Type': 'Voluntary',
+					'Exit Reason': 'Career Growth',
+				},
 			],
 			'Requisition Summary': [
 				{
-					'Requisition ID': 'REQ001',
+					'Requisition ID': 'CONTOH_REQ001',
 					Department: 'Design',
 					Position: 'UI/UX Designer',
 					Status: 'Open',
 				},
+				{
+					'Requisition ID': 'CONTOH_REQ002',
+					Department: 'Development',
+					Position: 'Backend Engineer',
+					Status: 'Filled',
+				},
 			],
 			'Recruitment Database': [
 				{
-					'Requisition ID': 'REQ001',
+					'Requisition ID': 'CONTOH_REQ001',
 					Department: 'Design',
 					Position: 'UI/UX Designer',
-					Candidate: 'Andi Wijaya',
+					Candidate: 'CONTOH_Andi Wijaya',
 					'Source Channel': 'LinkedIn',
-					Stage: 'Interview',
+					Stage: 'Hired',
 					'Applied Date': '2026-02-01',
-					'Offer Date': '',
-					'Accepted Date': '',
-					'Time to Hire (Days)': '',
+					'Offer Date': '2026-02-15',
+					'Accepted Date': '2026-02-18',
+					'Time to Hire (Days)': 17,
 				},
 			],
 			'Performance Database': [
 				{
-					'Employee ID': 'DP2601001',
+					'Employee ID': 'CONTOH_DP2601001',
 					Department: 'Design',
 					'Review Period': '2026-H1',
 					'KPI Score': 4.2,
@@ -79,7 +189,7 @@ export default function ImportPage() {
 			],
 			'Training Database': [
 				{
-					'Employee ID': 'DP2601001',
+					'Employee ID': 'CONTOH_DP2601001',
 					Department: 'Design',
 					Course: 'Advanced Figma System',
 					Status: 'Completed',
@@ -89,7 +199,7 @@ export default function ImportPage() {
 			],
 			'Engagement Survey Database': [
 				{
-					'Survey Wave': '2026-Q1',
+					'Survey Wave': 'CONTOH_2026-Q1',
 					Department: 'Design',
 					Dimension: 'Work-Life Balance',
 					'Score (1-5)': 4.5,
@@ -98,12 +208,12 @@ export default function ImportPage() {
 			],
 			'Exit Interview Database': [
 				{
-					'Employee ID': 'DP2110009',
-					Department: 'Design',
-					'Last Working Day': '2026-05-20',
+					'Employee ID': 'CONTOH_DP2502002',
+					Department: 'Development',
+					'Last Working Day': '2026-04-20',
 					'Exit Type': 'Voluntary',
 					Reason: 'Career Growth',
-					'Tenure (Months)': 18.5,
+					'Tenure (Months)': 14.5,
 					'Regrettable Loss': 'Yes',
 				},
 			],
@@ -111,6 +221,66 @@ export default function ImportPage() {
 
 		Object.entries(sheetsConfig).forEach(([sheetName, sampleData]) => {
 			const ws = XLSX.utils.json_to_sheet(sampleData);
+
+			if (sampleData.length > 0) {
+				const headers = Object.keys(sampleData[0]);
+
+				ws['!cols'] = headers.map((header) => {
+					const maxContentLen = sampleData.reduce((max, row) => {
+						const cellValue =
+							row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
+						return Math.max(max, cellValue.length);
+					}, header.length);
+					return {wch: Math.min(Math.max(maxContentLen + 5, 15), 55)};
+				});
+
+				ws['!rows'] = [{hpt: 26}];
+
+				const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+				const isGuideSheet = sheetName.includes('Panduan');
+
+				for (let R = range.s.r; R <= range.e.r; ++R) {
+					for (let C = range.s.c; C <= range.e.c; ++C) {
+						const cellRef = XLSX.utils.encode_cell({r: R, c: C});
+						if (!ws[cellRef]) {
+							ws[cellRef] = {t: 's', v: ''};
+						}
+
+						const isHeader = R === 0;
+						ws[cellRef].s = {
+							font: {
+								name: 'Calibri',
+								sz: isHeader ? 11 : 10,
+								bold: isHeader,
+								color: {rgb: isHeader ? 'FFFFFF' : '1F2937'},
+							},
+							fill: {
+								fgColor: {
+									rgb: isHeader
+										? isGuideSheet
+											? '1E40AF'
+											: '059669'
+										: R % 2 === 1
+											? 'F9FAFB'
+											: 'FFFFFF',
+								},
+							},
+							alignment: {
+								vertical: 'center',
+								horizontal: isHeader ? 'center' : 'left',
+								wrapText: true,
+							},
+							border: {
+								top: {style: 'thin', color: {rgb: 'D1D5DB'}},
+								bottom: {style: 'thin', color: {rgb: 'D1D5DB'}},
+								left: {style: 'thin', color: {rgb: 'D1D5DB'}},
+								right: {style: 'thin', color: {rgb: 'D1D5DB'}},
+							},
+						};
+					}
+				}
+			}
+
 			XLSX.utils.book_append_sheet(wb, ws, sheetName);
 		});
 
