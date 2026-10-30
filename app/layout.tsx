@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: 'DIPA INNOF',
-	description: 'DIPA INNOF Dashboard Application',
+	title: 'DIPA HUB',
+	description: 'DIPA HUB DASHBOARD APPLICATION',
 	icons: {
 		icon: '/icon.png',
 		apple: '/icon.png',
