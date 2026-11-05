@@ -65,7 +65,9 @@ export default function Sidebar({
 								<h1 className="text-base font-bold text-gray-900 dark:text-white leading-tight">
 									Dipa Inhouse
 								</h1>
-								<p className="text-[11px] text-emerald-500 font-semibold">Blueprint 2.0 Engine</p>
+								<p className="text-[11px] text-emerald-500 font-semibold">
+									People Analytics Engine
+								</p>
 							</div>
 						</div>
 						<button
