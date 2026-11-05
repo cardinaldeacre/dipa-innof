@@ -411,6 +411,64 @@ export async function processExcelImport(formData: FormData) {
 			}
 		}
 
+		if (workbook.Sheets['Talent Mapping Pilot']) {
+			const rows = XLSX.utils.sheet_to_json(workbook.Sheets['Talent Mapping Pilot']);
+			const uniqueTalentMap = new Map<string, any>();
+
+			rows.forEach((r: any) => {
+				const id = getCol(r, 'Employee ID', 'ID Karyawan');
+				if (!id || isTemplateSampleRow(id)) return;
+				const cleanId = String(id).trim();
+
+				const rawKpi = getCol(
+					r,
+					'Current-Month KPI (1-100%)',
+					'Current-Month KPI',
+					'KPI Bulan Berjalan'
+				);
+				const rawBeh = getCol(
+					r,
+					'Behavior Lead Score (1-5)',
+					'Behavior Lead Score',
+					'Behavior Score'
+				);
+				const rawSkill = getCol(r, 'Skill Map Score (1-5)', 'Skill Map Score', 'Skill Map');
+
+				const parseNum = (v: any) => {
+					if (v === null || v === undefined || String(v).trim() === '') return null;
+					const n = Number(String(v).replace('%', '').trim());
+					return isNaN(n) ? null : n;
+				};
+
+				uniqueTalentMap.set(cleanId, {
+					employee_id: cleanId,
+					kpi_current_month: parseNum(rawKpi),
+					kpi_period: getCol(r, 'KPI Period') ? String(getCol(r, 'KPI Period')).trim() : null,
+					behavior_lead_score: parseNum(rawBeh),
+					behavior_period: getCol(r, 'Behavior Period')
+						? String(getCol(r, 'Behavior Period')).trim()
+						: null,
+					behavior_evaluator: getCol(r, 'Behavior Evaluator')
+						? String(getCol(r, 'Behavior Evaluator')).trim()
+						: null,
+					skill_map_score: parseNum(rawSkill),
+					skill_level: getCol(r, 'Skill Level') ? String(getCol(r, 'Skill Level')).trim() : null,
+					skill_period: getCol(r, 'Skill Period') ? String(getCol(r, 'Skill Period')).trim() : null,
+					updated_at: new Date().toISOString(),
+				});
+			});
+
+			const data = Array.from(uniqueTalentMap.values());
+			if (data.length > 0) {
+				await withRetry(
+					'Talent Mapping Pilot',
+					async () =>
+						await supabase.from('talent_assessments').upsert(data, {onConflict: 'employee_id'})
+				);
+				summary.push(`${data.length} Talent Assessment`);
+			}
+		}
+
 		if (summary.length === 0) {
 			throw new Error(
 				'Tidak ada baris data baru di luar baris CONTOH_ atau nama sheet tidak sesuai.'

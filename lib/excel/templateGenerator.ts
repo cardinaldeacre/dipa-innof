@@ -232,6 +232,30 @@ export async function downloadSmartTemplate() {
 				'Regrettable Loss': 'Yes',
 			},
 		],
+		'Talent Mapping Pilot': [
+			{
+				'Employee ID': 'CONTOH_DP2601001',
+				'Current-Month KPI (1-100%)': 88.5,
+				'KPI Period': '2026-10',
+				'Behavior Lead Score (1-5)': 4.2,
+				'Behavior Period': '2026-H2',
+				'Behavior Evaluator': 'Lead Design',
+				'Skill Map Score (1-5)': 4.5,
+				'Skill Level': 'Senior',
+				'Skill Period': '2026-Q3',
+			},
+			{
+				'Employee ID': 'CONTOH_DP2502002',
+				'Current-Month KPI (1-100%)': 76.0,
+				'KPI Period': '2026-10',
+				'Behavior Lead Score (1-5)': '',
+				'Behavior Period': '',
+				'Behavior Evaluator': '',
+				'Skill Map Score (1-5)': 3.8,
+				'Skill Level': 'Mid',
+				'Skill Period': '2026-Q3',
+			},
+		],
 	};
 
 	// 3. Bangun setiap Worksheet beserta Styling & Dropdown Validation
