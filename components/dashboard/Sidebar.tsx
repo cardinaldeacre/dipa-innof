@@ -10,11 +10,11 @@ import {
 	UserPlus,
 	Upload,
 	LogOut,
+	Sparkles,
 } from 'lucide-react';
 import {logoutAction} from '@/app/login/actions';
 
-export type TabId = 'overview' | 'turnover' | 'newhire' | 'department' | 'quality';
-
+export type TabId = 'overview' | 'turnover' | 'newhire' | 'department' | 'quality' | 'talent';
 interface SidebarProps {
 	activeTab: TabId;
 	setActiveTab: (tab: TabId) => void;
@@ -31,6 +31,7 @@ export const NAV_ITEMS = [
 	{id: 'newhire' as const, label: '3. Hiring Effectiveness', icon: UserCheck},
 	{id: 'department' as const, label: '4. Department Matrix', icon: Building2},
 	{id: 'quality' as const, label: '5. Data Governance Log', icon: AlertTriangle},
+	{id: 'talent' as const, label: '6. Talent Mapping (9-Box)', icon: Sparkles},
 ];
 
 export default function Sidebar({
