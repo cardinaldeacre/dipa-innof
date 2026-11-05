@@ -398,26 +398,29 @@ export default function EmployeeManagerClient({
 											defaultValue={editingEmp?.exit_type || ''}
 											className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950">
 											<option value="">-- Pilih Tipe --</option>
-											<option value="Voluntary">Voluntary (Resign Sendiri)</option>
-											<option value="Involuntary">Involuntary (Diberhentikan)</option>
-											<option value="Contract Non-Renewal">Contract Non-Renewal</option>
-											<option value="Probation Non-Continuation">Gagal Probation</option>
+											<option value="Voluntary">Voluntary</option>
+											<option value="Involuntary">Involuntary</option>
+											<option value="Contract Non Renewal">Contract Non Renewal</option>
+											<option value="Probation Non Continuation">Probation Non Continuation</option>
+											<option value="Other">Other</option>
+											<option value="Intern Non Continuation">Intern Non Continuation</option>
 										</select>
 									</div>
 									<div>
-										<label className="block font-medium mb-1">Alasan Keluar</label>
+										<label className="block font-medium mb-1">Alasan Keluar (Exit Reason)</label>
 										<select
 											name="exit_reason"
 											defaultValue={editingEmp?.exit_reason || ''}
 											className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950">
 											<option value="">-- Pilih Alasan --</option>
 											<option value="Compensation">Compensation</option>
-											<option value="Career Growth">Career Growth</option>
-											<option value="Workload">Workload</option>
+											<option value="Growth">Growth</option>
+											<option value="Role">Role</option>
 											<option value="Management">Management</option>
+											<option value="Workload">Workload</option>
 											<option value="Culture">Culture</option>
-											<option value="Personal">Personal / Family</option>
-											<option value="Performance">Performance</option>
+											<option value="External Opportunity">External Opportunity</option>
+											<option value="Personal">Personal</option>
 											<option value="Other">Other</option>
 										</select>
 									</div>
