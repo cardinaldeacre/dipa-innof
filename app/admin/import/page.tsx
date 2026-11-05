@@ -64,15 +64,16 @@ export default function ImportPage() {
 				'Nama Sheet': 'Employee Master & Exit Interview',
 				'Nama Kolom': 'Exit Type',
 				'Aturan / Nilai yang Diizinkan':
-					'Voluntary | Involuntary | Contract Non-Renewal | Probation Non-Continuation',
-				Keterangan: 'Wajib diisi jika karyawan memiliki Exit Date.',
+					'Voluntary | Involuntary | Contract Non Renewal | Probation Non Continuation | Other | Intern Non Continuation',
+				Keterangan:
+					'Involuntary, Contract Non Renewal, dan Probation Non Continuation dihitung sebagai Involuntary Turnover.',
 			},
 			{
 				'Nama Sheet': 'Employee Master & Exit Interview',
 				'Nama Kolom': 'Exit Reason / Reason',
 				'Aturan / Nilai yang Diizinkan':
-					'Compensation | Career Growth | Workload | Management | Culture | Personal | Performance | Other',
-				Keterangan: 'Digunakan untuk grafik analisis alasan resign.',
+					'Compensation | Growth | Role | Management | Workload | Culture | External Opportunity | Personal | Other',
+				Keterangan: 'Digunakan untuk grafik analisis alasan keluar karyawan.',
 			},
 			{
 				'Nama Sheet': 'Requisition Summary',
