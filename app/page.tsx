@@ -4,7 +4,7 @@ import {redirect} from 'next/navigation';
 import {Loader2} from 'lucide-react';
 import {connection} from 'next/server';
 import {createClient} from '@/lib/supabase/server';
-import DashboardClient from '@/components/DashboardClient';
+import DashboardClient from '@/components/dashboard/DashboardClient';
 
 dns.setDefaultResultOrder('ipv4first');
 
@@ -24,10 +24,11 @@ async function DashboardDataLoader() {
 	const email = user.email || '';
 	const isHrAdmin = email.toLowerCase().includes('hr') || email.toLowerCase().includes('admin');
 
-	const [empRes, reqRes, recRes] = await Promise.all([
+	const [empRes, reqRes, recRes, talentRes] = await Promise.all([
 		supabase.from('employees').select('*').order('join_date', {ascending: false}),
 		supabase.from('job_requisitions').select('*', {count: 'exact', head: true}),
 		supabase.from('recruitment_applications').select('*', {count: 'exact', head: true}),
+		supabase.from('talent_assessments').select('*'),
 	]);
 
 	return (
@@ -35,6 +36,7 @@ async function DashboardDataLoader() {
 			employees={empRes.data || []}
 			requisitionsCount={reqRes.count || 0}
 			candidatesCount={recRes.count || 0}
+			talentAssessments={talentRes.data || []}
 			userEmail={email}
 			isHrAdmin={isHrAdmin}
 		/>

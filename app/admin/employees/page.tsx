@@ -3,7 +3,7 @@ import {Suspense} from 'react';
 import {Loader2} from 'lucide-react';
 import {connection} from 'next/server';
 import {createClient} from '@/lib/supabase/server';
-import EmployeeManagerClient from '@/components/EmployeeManagerClient';
+import EmployeeManagerClient from '@/components/dashboard/EmployeeManagerClient';
 
 dns.setDefaultResultOrder('ipv4first');
 
