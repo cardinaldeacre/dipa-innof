@@ -108,7 +108,6 @@ export default function TalentModals({
 
 	return (
 		<>
-			{/* MODAL DETAIL GRANULAR REVISI 2 */}
 			{detailMember && (
 				<div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
 					<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 my-8 max-h-[90vh] overflow-y-auto">
@@ -289,7 +288,6 @@ export default function TalentModals({
 				</div>
 			)}
 
-			{/* MODAL INPUT / EDIT GRANULAR REVISI 2 */}
 			{editingMember && (
 				<div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
 					<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl my-8 max-h-[92vh] overflow-y-auto">

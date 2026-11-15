@@ -209,7 +209,7 @@ export async function saveTalentAssessmentAction(formData: FormData) {
 		revalidatePath('/');
 		return {
 			success: true,
-			message: `✅ Data Granular Talent Mapping Revisi 2 untuk ${employee_name} (${employee_id}) berhasil disimpan!`,
+			message: `✅ Data Granular Talent Mapping untuk ${employee_name} (${employee_id}) berhasil disimpan!`,
 		};
 	} catch (error: any) {
 		return {

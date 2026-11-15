@@ -63,9 +63,9 @@ export default function NineBoxMatrix({
 					<div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2.5">
 						<AlertTriangle className="w-4 h-4 shrink-0" />
 						<span>
-							<b>Catatan Governance P&C (Revisi 2):</b> Sumbu Y adalah <b>Capability Score</b> (60%
-							Skill + 40% Behavior), <u>bukan Potential</u>. Hanya <b>{completeCount} member</b>{' '}
-							dengan status <i>Complete / Provisional</i> yang di-plot. Member berstatus{' '}
+							<b>Catatan Governance P&C:</b> Sumbu Y adalah <b>Capability Score</b> (60% Skill + 40%
+							Behavior), <u>bukan Potential</u>. Hanya <b>{completeCount} member</b> dengan status{' '}
+							<i>Complete / Provisional</i> yang di-plot. Member berstatus{' '}
 							<i>Pending Calibration / Incomplete / ID Pending</i> tidak dipaksa masuk ke kotak.
 						</span>
 					</div>
@@ -122,8 +122,8 @@ export default function NineBoxMatrix({
 						Validation Gate Aktif — Menunggu Persetujuan P&C (Activate Scoring)
 					</p>
 					<p className="text-xs text-gray-500 max-w-xl mx-auto">
-						Sesuai Bagian 5.6 Spesifikasi Revisi 2, silakan tinjau kelengkapan data, status
-						kalibrasi (|Delta| &ge; 2), dan validasi ID pada tabel di bawah terlebih dahulu sebelum
+						Sesuai Bagian 5.6 Spesifikasi, silakan tinjau kelengkapan data, status kalibrasi
+						(|Delta| &ge; 2), dan validasi ID pada tabel di bawah terlebih dahulu sebelum
 						mengaktifkan switch <b>P&C Validation Approved (Activate Scoring)</b> di kanan atas.
 					</p>
 				</div>
