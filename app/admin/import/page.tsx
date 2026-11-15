@@ -3,7 +3,10 @@
 import {useActionState} from 'react';
 import {Loader2, CheckCircle, AlertCircle, Database, Download} from 'lucide-react';
 import {processExcelImport} from './actions';
-import {downloadSmartTemplate} from '@/lib/excel/templateGenerator';
+import {
+	downloadSmartTemplate,
+	downloadTalentMappingV2Template,
+} from '@/lib/excel/templateGenerator';
 
 const initialState = {
 	success: false,
@@ -18,10 +21,6 @@ export default function ImportPage() {
 		initialState
 	);
 
-	const handleDownloadTemplate = async () => {
-		await downloadSmartTemplate();
-	};
-
 	return (
 		<div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-950">
 			<div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-xl w-full max-w-xl border border-gray-200 dark:border-gray-800 relative overflow-hidden">
@@ -32,7 +31,7 @@ export default function ImportPage() {
 							Memproses Semua Sheet Excel...
 						</h2>
 						<p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 text-center px-6 animate-pulse">
-							Menyuntikkan seluruh tabel ke Supabase, mohon tunggu sebentar.
+							Menyuntikkan seluruh tabel (v1 & Workbook v2 Talent Mapping) ke Supabase...
 						</p>
 					</div>
 				)}
@@ -42,25 +41,42 @@ export default function ImportPage() {
 						<Database className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
 					</div>
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-						Import & Sinkronisasi Data HR
+						Import & Sinkronisasi Data HR (v1 & v2)
 					</h1>
 					<p className="text-gray-500 dark:text-gray-400 text-sm">
-						Mendukung Multi-Sheet (Karyawan, Rekrutmen, Performa, Training, Survey & Exit)
+						Mendukung Workbook v1 (Workforce Stability) & Workbook v2 (4 Sheet Granular Talent
+						Mapping Revisi 2)
 					</p>
 				</div>
 
-				<div className="mb-6 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between gap-4">
-					<div className="text-xs text-blue-700 dark:text-blue-300">
-						<p className="font-semibold text-sm mb-0.5">Belum punya format Excel-nya?</p>
-						<p>Unduh template resmi (7 Sheet) agar format kolom otomatis sesuai.</p>
+				<div className="mb-6 space-y-2.5">
+					<div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between gap-4">
+						<div className="text-xs text-blue-700 dark:text-blue-300">
+							<p className="font-semibold text-sm mb-0.5">Workbook v2 — Talent Mapping (4 Sheet)</p>
+							<p>Employee_Master, KPI_Data, Behavior_Assessment (7 Dim), Skill_Map_Data (L1–L4).</p>
+						</div>
+						<button
+							type="button"
+							onClick={() => downloadTalentMappingV2Template()}
+							className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+							<Download className="w-4 h-4" />
+							<span>Template v2</span>
+						</button>
 					</div>
-					<button
-						type="button"
-						onClick={handleDownloadTemplate}
-						className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
-						<Download className="w-4 h-4" />
-						<span>Download Template</span>
-					</button>
+
+					<div className="p-3.5 rounded-xl bg-gray-100 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-4">
+						<div className="text-xs text-gray-600 dark:text-gray-300">
+							<p className="font-semibold mb-0.5">Template All-in-One (Workforce + Talent)</p>
+							<p>Gabungan seluruh sheet HR v1 beserta 4 sheet Talent Mapping v2.</p>
+						</div>
+						<button
+							type="button"
+							onClick={() => downloadSmartTemplate()}
+							className="shrink-0 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+							<Download className="w-3.5 h-3.5" />
+							<span>All-in-One</span>
+						</button>
+					</div>
 				</div>
 
 				<form action={formAction} className="space-y-6">
@@ -82,6 +98,11 @@ export default function ImportPage() {
                 hover:file:bg-emerald-700
                 file:cursor-pointer cursor-pointer"
 						/>
+						<p className="text-[11px] text-gray-400 mt-2">
+							Tip: Anda dapat langsung meng-upload file{' '}
+							<b>Dipa_People_Analytics_v2_Talent_Mapping_Data.xlsx</b>. Sheet kalkulasi (seperti
+							HAV_Summary & Data_Validation) akan otomatis diabaikan sesuai panduan.
+						</p>
 					</div>
 
 					<button
