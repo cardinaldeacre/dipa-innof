@@ -24,12 +24,17 @@ async function DashboardDataLoader() {
 	const email = user.email || '';
 	const isHrAdmin = email.toLowerCase().includes('hr') || email.toLowerCase().includes('admin');
 
-	const [empRes, reqRes, recRes, talentRes] = await Promise.all([
-		supabase.from('employees').select('*').order('join_date', {ascending: false}),
-		supabase.from('job_requisitions').select('*', {count: 'exact', head: true}),
-		supabase.from('recruitment_applications').select('*', {count: 'exact', head: true}),
-		supabase.from('talent_assessments').select('*'),
-	]);
+	const [empRes, reqRes, recRes, talentRes, kpiRes, behRes, skillRes, configRes] =
+		await Promise.all([
+			supabase.from('employees').select('*').order('join_date', {ascending: false}),
+			supabase.from('job_requisitions').select('*', {count: 'exact', head: true}),
+			supabase.from('recruitment_applications').select('*', {count: 'exact', head: true}),
+			supabase.from('talent_assessments').select('*'),
+			supabase.from('talent_kpi_data').select('*'),
+			supabase.from('talent_behavior_assessments').select('*'),
+			supabase.from('talent_skill_map_data').select('*'),
+			supabase.from('talent_config').select('*').eq('id', 'pilot_2026').maybeSingle(),
+		]);
 
 	return (
 		<DashboardClient
@@ -37,6 +42,10 @@ async function DashboardDataLoader() {
 			requisitionsCount={reqRes.count || 0}
 			candidatesCount={recRes.count || 0}
 			talentAssessments={talentRes.data || []}
+			talentKpiRows={kpiRes.data || []}
+			talentBehaviorRows={behRes.data || []}
+			talentSkillRows={skillRes.data || []}
+			pcValidationApproved={Boolean(configRes.data?.pc_validation_approved)}
 			userEmail={email}
 			isHrAdmin={isHrAdmin}
 		/>
