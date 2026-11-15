@@ -295,9 +295,7 @@ export default function TalentModals({
 					<div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl my-8 max-h-[92vh] overflow-y-auto">
 						<div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
 							<div>
-								<h3 className="text-base font-bold">
-									Input / Update Granular Talent Mapping (Revisi 2)
-								</h3>
+								<h3 className="text-base font-bold">Input / Update Granular Talent Mapping</h3>
 								<p className="text-xs text-gray-500">
 									{editingMember.employee_name} ({editingMember.employee_id}) • Job Level:{' '}
 									<b>{editingMember.job_level}</b>
@@ -600,7 +598,7 @@ export default function TalentModals({
 									disabled={saving}
 									className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-2 cursor-pointer">
 									{saving && <Loader2 className="w-4 h-4 animate-spin" />}
-									Simpan Granular Revisi 2
+									Simpan Granular
 								</button>
 							</div>
 						</form>

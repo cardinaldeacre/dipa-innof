@@ -187,7 +187,7 @@ export default function TalentMappingTab({
 			[headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 		const link = document.createElement('a');
 		link.setAttribute('href', encodeURI(csvContent));
-		link.setAttribute('download', `Dipa_Talent_Mapping_Rev2_${cutoffDate}.csv`);
+		link.setAttribute('download', `Dipa_Talent_Mapping${cutoffDate}.csv`);
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
@@ -208,9 +208,6 @@ export default function TalentMappingTab({
 			<div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex flex-wrap items-center justify-between gap-4">
 				<div className="space-y-1">
 					<div className="flex flex-wrap items-center gap-2">
-						<span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-600 text-white">
-							Pilot 2026 — Revisi 2
-						</span>
 						<h3 className="text-sm font-bold text-gray-900 dark:text-white">
 							Talent Mapping (HAV / 9-Box) — Evidence-Based Capability & Performance
 						</h3>

@@ -103,7 +103,7 @@ export default function TalentMemberTable({
 		<div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
 			<div className="p-5 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-4">
 				<div>
-					<h2 className="text-base font-bold">HAV Summary & Scoring Table (Revisi 2)</h2>
+					<h2 className="text-base font-bold">HAV Summary & Scoring Table</h2>
 					<p className="text-xs text-gray-500">
 						Menyimpan terpisah antara Skor Asli (Raw), Skor Normalisasi (0–100), dan Klasifikasi
 						beserta 8 Status Data Resmi.
@@ -165,7 +165,7 @@ export default function TalentMemberTable({
 						onClick={onExportCSV}
 						className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5 cursor-pointer">
 						<Download className="w-3.5 h-3.5" />
-						<span>Export CSV v2</span>
+						<span>Export CSV</span>
 					</button>
 				</div>
 			</div>
@@ -367,7 +367,7 @@ export default function TalentMemberTable({
 											<button
 												onClick={() => onEditMember(m)}
 												className="p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 cursor-pointer"
-												title="Input / Edit Skor Granular Revisi 2">
+												title="Input / Edit Skor Granular">
 												<Edit3 className="w-4 h-4" />
 											</button>
 										)}
