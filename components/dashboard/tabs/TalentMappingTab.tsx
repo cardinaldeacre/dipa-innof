@@ -1,14 +1,20 @@
 'use client';
 
 import {useState, useMemo} from 'react';
-import {FlaskConical} from 'lucide-react';
+import {Lock, CheckCircle2} from 'lucide-react';
 import {EmployeeRow} from '@/lib/engine/analytics';
 import {
 	TalentAssessmentRow,
+	TalentKpiRow,
+	TalentBehaviorRow,
+	TalentSkillRow,
 	calculateTalentMapping,
 	EnrichedTalentMember,
 } from '@/lib/engine/talentMapping';
-import {saveTalentAssessmentAction} from '@/app/admin/talent/actions';
+import {
+	saveTalentAssessmentAction,
+	togglePcValidationApprovalAction,
+} from '@/app/admin/talent/actions';
 import TalentOverviewCards from './talent/TalentOverviewCards';
 import NineBoxMatrix from './talent/NineBoxMatrix';
 import TalentMemberTable from './talent/TalentMemberTable';
@@ -17,6 +23,11 @@ import TalentModals from './talent/TalentModals';
 interface Props {
 	employees: EmployeeRow[];
 	assessments: TalentAssessmentRow[];
+	kpiRows?: TalentKpiRow[];
+	behaviorRows?: TalentBehaviorRow[];
+	skillRows?: TalentSkillRow[];
+	initialValidationApproved?: boolean;
+	userEmail?: string;
 	cutoffDate: string;
 	selectedDept: string;
 	includeInterns: boolean;
@@ -26,12 +37,18 @@ interface Props {
 export default function TalentMappingTab({
 	employees,
 	assessments,
+	kpiRows = [],
+	behaviorRows = [],
+	skillRows = [],
+	initialValidationApproved = false,
+	userEmail = '',
 	cutoffDate,
 	selectedDept,
 	includeInterns,
 	isHrAdmin,
 }: Props) {
-	const [experimentalMode, setExperimentalMode] = useState<boolean>(true);
+	const [validationApproved, setValidationApproved] = useState<boolean>(initialValidationApproved);
+	const [togglingGate, setTogglingGate] = useState<boolean>(false);
 	const [selectedLevel, setSelectedLevel] = useState<string>('ALL');
 	const [selectedPeriod, setSelectedPeriod] = useState<string>('ALL');
 	const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -43,32 +60,25 @@ export default function TalentMappingTab({
 	const [saving, setSaving] = useState(false);
 	const [feedback, setFeedback] = useState<{success: boolean; message: string} | null>(null);
 
-	const levels = useMemo(() => {
-		const s = new Set(employees.map((e) => e.job_title).filter(Boolean) as string[]);
-		return ['ALL', ...Array.from(s).sort()];
-	}, [employees]);
-
-	const periods = useMemo(() => {
-		const s = new Set<string>();
-		assessments.forEach((a) => {
-			if (a.kpi_period) s.add(a.kpi_period);
-			if (a.behavior_period) s.add(a.behavior_period);
-			if (a.skill_period) s.add(a.skill_period);
-		});
-		return ['ALL', ...Array.from(s).sort()];
-	}, [assessments]);
-
 	const talentData = useMemo(() => {
-		return calculateTalentMapping(employees, assessments, {
-			cutoffDate,
-			department: selectedDept,
-			level: selectedLevel,
-			period: selectedPeriod,
-			includeInterns,
-		});
+		return calculateTalentMapping(
+			employees,
+			assessments,
+			{
+				cutoffDate,
+				department: selectedDept,
+				level: selectedLevel,
+				period: selectedPeriod,
+				includeInterns,
+			},
+			{kpiRows, behaviorRows, skillRows}
+		);
 	}, [
 		employees,
 		assessments,
+		kpiRows,
+		behaviorRows,
+		skillRows,
 		cutoffDate,
 		selectedDept,
 		selectedLevel,
@@ -76,63 +86,108 @@ export default function TalentMappingTab({
 		includeInterns,
 	]);
 
+	const levels = useMemo(() => {
+		return [
+			'ALL',
+			'Intern',
+			'Junior Staff',
+			'Staff',
+			'Senior Staff',
+			'Junior Lead',
+			'Senior Lead',
+			'Needs Confirmation',
+		];
+	}, []);
+
+	const periods = useMemo(() => {
+		const s = new Set<string>();
+		kpiRows.forEach((r) => r.kpi_period && s.add(r.kpi_period));
+		behaviorRows.forEach((r) => r.assessment_period && s.add(r.assessment_period));
+		skillRows.forEach((r) => r.assessment_period && s.add(r.assessment_period));
+		assessments.forEach((a) => {
+			if (a.kpi_period) s.add(a.kpi_period);
+			if (a.behavior_period) s.add(a.behavior_period);
+			if (a.skill_period) s.add(a.skill_period);
+		});
+		return ['ALL', ...Array.from(s).sort()];
+	}, [kpiRows, behaviorRows, skillRows, assessments]);
+
 	const filteredMembers = useMemo(() => {
 		return talentData.members.filter((m) => {
 			if (statusFilter !== 'ALL' && m.data_status !== statusFilter) return false;
-			if (
-				selectedBoxKey &&
-				`${m.performance_bucket}-${m.potential_proxy_bucket}` !== selectedBoxKey
-			)
-				return false;
+			if (selectedBoxKey && m.box_key !== selectedBoxKey) return false;
 			if (search.trim().length >= 2) {
 				const q = search.toLowerCase();
 				return (
 					m.employee_name.toLowerCase().includes(q) ||
 					m.employee_id.toLowerCase().includes(q) ||
-					m.department.toLowerCase().includes(q)
+					m.department.toLowerCase().includes(q) ||
+					m.job_level.toLowerCase().includes(q)
 				);
 			}
 			return true;
 		});
 	}, [talentData.members, statusFilter, selectedBoxKey, search]);
 
+	const handleToggleValidationGate = async (checked: boolean) => {
+		setTogglingGate(true);
+		setValidationApproved(checked);
+		if (!checked) setSelectedBoxKey(null);
+		await togglePcValidationApprovalAction(checked, userEmail);
+		setTogglingGate(false);
+	};
+
 	const handleExportTalentCSV = () => {
 		const headers = [
 			'Employee ID',
 			'Employee Name',
 			'Department',
-			'Level',
-			'Current-Month KPI (%) [Provisional]',
+			'Job Title',
+			'Job Level',
+			'Job Level Basis',
+			'KPI Raw (%)',
 			'KPI Period',
-			'Behavior Lead Score (1-5)',
+			'Performance Bucket',
+			'Behavior Raw (1-5)',
+			'Behavior Normalized (0-100)',
 			'Behavior Period',
 			'Behavior Evaluator',
-			'Skill Map Score (1-5)',
+			'Skill Raw Avg (1-4)',
+			'Skill Normalized (0-100)',
 			'Skill Period',
-			'Data Status',
-			'Experimental 9-Box',
+			'Capability Score (60S+40B)',
+			'Capability Bucket',
+			'Official Data Status',
+			'Indicative 9-Box',
 		];
 		const rows = filteredMembers.map((m) => [
 			m.employee_id,
 			`"${m.employee_name}"`,
 			`"${m.department}"`,
 			`"${m.job_title}"`,
-			m.kpi_current_month !== null ? `${m.kpi_current_month}%` : 'N/A',
+			m.job_level,
+			m.job_level_basis,
+			m.is_intern ? 'Not Applicable' : m.kpi_raw !== null ? `${m.kpi_raw}%` : 'N/A',
 			m.kpi_period || 'N/A',
-			m.behavior_lead_score !== null ? m.behavior_lead_score : 'Pending Assessment',
+			m.performance_bucket || 'N/A',
+			m.behavior_raw_avg !== null ? m.behavior_raw_avg : 'Pending Assessment',
+			m.behavior_normalized_100 !== null ? m.behavior_normalized_100 : 'N/A',
 			m.behavior_period || 'N/A',
 			`"${m.behavior_evaluator || 'N/A'}"`,
-			m.skill_map_score !== null ? m.skill_map_score : 'N/A',
+			m.skill_raw_final_avg !== null ? m.skill_raw_final_avg : 'N/A',
+			m.skill_normalized_100 !== null ? m.skill_normalized_100 : 'N/A',
 			m.skill_period || 'N/A',
+			validationApproved && m.capability_score !== null ? m.capability_score : 'Locked / N/A',
+			validationApproved && m.capability_bucket ? m.capability_bucket : 'Locked / N/A',
 			m.data_status,
-			experimentalMode && m.box_label ? `"${m.box_label} (Experimental)"` : 'Not Classified',
+			validationApproved && m.box_label ? `"${m.box_label} (Indicative)"` : 'Not Classified',
 		]);
 		const csvContent =
 			'data:text/csv;charset=utf-8,' +
 			[headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 		const link = document.createElement('a');
 		link.setAttribute('href', encodeURI(csvContent));
-		link.setAttribute('download', `Talent_Mapping_Pilot_${cutoffDate}.csv`);
+		link.setAttribute('download', `Dipa_Talent_Mapping_Rev2_${cutoffDate}.csv`);
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
@@ -151,40 +206,50 @@ export default function TalentMappingTab({
 	return (
 		<div className="space-y-6">
 			<div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex flex-wrap items-center justify-between gap-4">
-				<div className="space-y-0.5">
-					<div className="flex items-center gap-2">
+				<div className="space-y-1">
+					<div className="flex flex-wrap items-center gap-2">
 						<span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-blue-600 text-white">
-							Pilot 2026 MVP
+							Pilot 2026 — Revisi 2
 						</span>
 						<h3 className="text-sm font-bold text-gray-900 dark:text-white">
-							Talent Mapping (HAV / 9-Box) — Safe Evidence-Based Pilot
+							Talent Mapping (HAV / 9-Box) — Evidence-Based Capability & Performance
 						</h3>
 					</div>
 					<p className="text-xs text-gray-600 dark:text-gray-300">
-						Menampilkan <b>Current-Month KPI (Provisional)</b>, <b>Behavior Lead Score</b>, dan{' '}
-						<b>Skill Map</b> secara terpisah.
+						<b>Sumbu X:</b> KPI Kuartalan (Low &lt;80, Med 80–&lt;100, High 100) •{' '}
+						<b>Sumbu Y (Capability):</b> 60% Skill (Gap Konversi) + 40% Behavior (7 Dimensi).{' '}
+						<i>Build from available evidence.</i>
 					</p>
 				</div>
 
-				<label className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm cursor-pointer text-xs font-bold">
-					<input
-						type="checkbox"
-						checked={experimentalMode}
-						onChange={(e) => {
-							setExperimentalMode(e.target.checked);
-							if (!e.target.checked) setSelectedBoxKey(null);
-						}}
-						className="rounded text-amber-500 focus:ring-0"
-					/>
-					<FlaskConical className="w-4 h-4 text-amber-500" />
-					<span>Experimental 9-Box Preview</span>
-				</label>
+				<div className="flex items-center gap-3">
+					<label
+						className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border shadow-sm text-xs font-bold transition-all ${
+							validationApproved
+								? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+								: 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200'
+						} ${isHrAdmin ? 'cursor-pointer' : 'opacity-80 cursor-not-allowed'}`}>
+						<input
+							type="checkbox"
+							disabled={!isHrAdmin || togglingGate}
+							checked={validationApproved}
+							onChange={(e) => handleToggleValidationGate(e.target.checked)}
+							className="rounded text-emerald-600 focus:ring-0"
+						/>
+						{validationApproved ? (
+							<CheckCircle2 className="w-4 h-4 text-emerald-500" />
+						) : (
+							<Lock className="w-4 h-4 text-amber-500" />
+						)}
+						<span>P&C Validation Approved (Activate Scoring)</span>
+					</label>
+				</div>
 			</div>
 
 			<TalentOverviewCards overview={talentData.overview} />
 
 			<NineBoxMatrix
-				experimentalMode={experimentalMode}
+				experimentalMode={validationApproved}
 				completeCount={talentData.overview.completeCount}
 				gridCells={talentData.gridCells}
 				selectedBoxKey={selectedBoxKey}
@@ -203,7 +268,7 @@ export default function TalentMappingTab({
 				setStatusFilter={setStatusFilter}
 				search={search}
 				setSearch={setSearch}
-				experimentalMode={experimentalMode}
+				experimentalMode={validationApproved}
 				isHrAdmin={isHrAdmin}
 				onExportCSV={handleExportTalentCSV}
 				onViewDetail={setDetailMember}
