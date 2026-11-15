@@ -12,7 +12,12 @@ import HiringTab from './tabs/HiringTab';
 import DepartmentTab from './tabs/DepartmentTab';
 import QualityTab from './tabs/QualityTab';
 import TalentMappingTab from './tabs/TalentMappingTab';
-import {TalentAssessmentRow} from '@/lib/engine/talentMapping';
+import {
+	TalentAssessmentRow,
+	TalentKpiRow,
+	TalentBehaviorRow,
+	TalentSkillRow,
+} from '@/lib/engine/talentMapping';
 
 interface Props {
 	employees: EmployeeRow[];
@@ -21,6 +26,10 @@ interface Props {
 	userEmail?: string;
 	isHrAdmin?: boolean;
 	talentAssessments?: TalentAssessmentRow[];
+	talentKpiRows?: TalentKpiRow[];
+	talentBehaviorRows?: TalentBehaviorRow[];
+	talentSkillRows?: TalentSkillRow[];
+	pcValidationApproved?: boolean;
 }
 
 export default function DashboardClient({
@@ -28,6 +37,10 @@ export default function DashboardClient({
 	userEmail = 'Internal User',
 	isHrAdmin = true,
 	talentAssessments = [],
+	talentKpiRows = [],
+	talentBehaviorRows = [],
+	talentSkillRows = [],
+	pcValidationApproved = false,
 }: Props) {
 	const [activeTab, setActiveTab] = useState<TabId>('overview');
 	const [cutoffDate, setCutoffDate] = useState<string>('2026-10-27');
@@ -125,7 +138,6 @@ export default function DashboardClient({
 				/>
 
 				<main className="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 flex-1">
-					{/* 8 Kartu KPI Utama */}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 						<div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-between">
 							<div>
@@ -207,7 +219,6 @@ export default function DashboardClient({
 						/>
 					</div>
 
-					{/* Render Tab secara Modular */}
 					{activeTab === 'overview' && (
 						<OverviewTab monthlyTable={analytics.monthlyTable} year={cutoffDate.slice(0, 4)} />
 					)}
@@ -223,6 +234,11 @@ export default function DashboardClient({
 						<TalentMappingTab
 							employees={employees}
 							assessments={talentAssessments}
+							kpiRows={talentKpiRows}
+							behaviorRows={talentBehaviorRows}
+							skillRows={talentSkillRows}
+							initialValidationApproved={pcValidationApproved}
+							userEmail={userEmail}
 							cutoffDate={cutoffDate}
 							selectedDept={selectedDept}
 							includeInterns={includeInterns}
