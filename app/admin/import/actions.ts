@@ -2,6 +2,7 @@
 
 import dns from 'node:dns';
 import * as XLSX from 'xlsx';
+import {revalidatePath} from 'next/cache';
 import {createClient} from '@/lib/supabase/server';
 
 dns.setDefaultResultOrder('ipv4first');
@@ -15,9 +16,6 @@ async function withRetry<T>(operationName: string, fn: () => Promise<{data?: T; 
 
 			lastError = result.error;
 			if (String(result.error.message).includes('fetch failed')) {
-				console.warn(
-					`⚠️ [${operationName}] Koneksi kedip (percobaan ${attempt}/3), mencoba ulang...`
-				);
 				await new Promise((r) => setTimeout(r, 600 * attempt));
 				continue;
 			}
@@ -39,10 +37,40 @@ async function withRetry<T>(operationName: string, fn: () => Promise<{data?: T; 
 function getCol(row: any, ...possibleNames: string[]): any {
 	const rowKeys = Object.keys(row);
 	for (const name of possibleNames) {
-		const target = name.trim().toLowerCase();
-		const foundKey = rowKeys.find((k) => k.trim().toLowerCase() === target);
+		const target = name
+			.trim()
+			.toLowerCase()
+			.replace(/[\s_]+/g, ' ');
+		const foundKey = rowKeys.find(
+			(k) =>
+				k
+					.trim()
+					.toLowerCase()
+					.replace(/[\s_]+/g, ' ') === target
+		);
 		if (foundKey !== undefined && row[foundKey] !== '' && row[foundKey] !== null) {
 			return row[foundKey];
+		}
+	}
+	return null;
+}
+
+function getSheet(workbook: XLSX.WorkBook, ...possibleSheetNames: string[]) {
+	const actualNames = workbook.SheetNames;
+	for (const name of possibleSheetNames) {
+		const target = name
+			.trim()
+			.toLowerCase()
+			.replace(/[\s_]+/g, ' ');
+		const found = actualNames.find(
+			(s) =>
+				s
+					.trim()
+					.toLowerCase()
+					.replace(/[\s_]+/g, ' ') === target
+		);
+		if (found && workbook.Sheets[found]) {
+			return workbook.Sheets[found];
 		}
 	}
 	return null;
@@ -51,6 +79,21 @@ function getCol(row: any, ...possibleNames: string[]): any {
 function isTemplateSampleRow(val: any): boolean {
 	if (!val) return false;
 	return String(val).trim().toUpperCase().startsWith('CONTOH_');
+}
+
+function parseNum(v: any): number | null {
+	if (v === null || v === undefined || String(v).trim() === '') return null;
+	const cleaned = String(v).replace('%', '').replace(/^L/i, '').trim();
+	const n = Number(cleaned);
+	return isNaN(n) ? null : n;
+}
+
+function parseBool(v: any, defaultVal = false): boolean {
+	if (v === null || v === undefined || String(v).trim() === '') return defaultVal;
+	const s = String(v).trim().toLowerCase();
+	if (['true', 'yes', 'ya', '1', 'confirmed', 'calibrated', 'applicable'].includes(s)) return true;
+	if (['false', 'no', 'tidak', '0', 'n/a', 'not applicable'].includes(s)) return false;
+	return defaultVal;
 }
 
 function normalizeStatus(val: any, hasExitDate: boolean): string {
@@ -123,38 +166,53 @@ export async function processExcelImport(formData: FormData) {
 
 		const summary: string[] = [];
 
-		if (workbook.Sheets['Employee Master']) {
-			const rows = XLSX.utils.sheet_to_json(workbook.Sheets['Employee Master']);
+		// Bangun peta pencocokan Nama Lengkap -> Employee_ID dari database
+		const {data: existingEmps} = await supabase
+			.from('employees')
+			.select('employee_id, employee_name');
 
-			const {data: existingEmps} = await supabase
-				.from('employees')
-				.select('employee_id, employee_name');
+		const nameToIdMap = new Map<string, string>();
+		const validEmpIds = new Set<string>();
+		existingEmps?.forEach((e) => {
+			if (e.employee_id) validEmpIds.add(e.employee_id.trim());
+			if (e.employee_name && e.employee_id) {
+				nameToIdMap.set(e.employee_name.trim().toLowerCase(), e.employee_id.trim());
+			}
+		});
 
-			const nameToIdMap = new Map<string, string>();
-			existingEmps?.forEach((e) => {
-				if (e.employee_name && e.employee_id) {
-					nameToIdMap.set(e.employee_name.trim().toLowerCase(), e.employee_id.trim());
-				}
-			});
-
+		// 1. EMPLOYEE MASTER (Mendukung "Employee Master" maupun "Employee_Master")
+		const empSheet = getSheet(workbook, 'Employee Master', 'Employee_Master');
+		if (empSheet) {
+			const rows = XLSX.utils.sheet_to_json(empSheet);
 			const uniqueEmpMap = new Map<string, any>();
 
-			rows.forEach((r: any) => {
-				let id = getCol(r, 'Employee ID', 'ID Karyawan');
-				const name = getCol(r, 'Employee Name', 'Nama Karyawan');
-				if (!id || !name || isTemplateSampleRow(id) || isTemplateSampleRow(name)) return;
+			rows.forEach((r: any, idx: number) => {
+				const rawId = getCol(r, 'Employee ID', 'ID Karyawan');
+				const name = getCol(r, 'Employee Name', 'Nama Karyawan', 'Full Name');
+				if (!name || isTemplateSampleRow(rawId) || isTemplateSampleRow(name)) return;
 
 				const cleanName = String(name).trim();
-				let cleanId = String(id).trim();
+				let cleanId = rawId ? String(rawId).trim() : '';
 
 				const existingIdForName = nameToIdMap.get(cleanName.toLowerCase());
 				if (existingIdForName) {
 					cleanId = existingIdForName;
+				} else if (!cleanId) {
+					// Jika Employee ID masih kosong sementara pada Employee_Master, tandai ID_PENDING
+					cleanId = `ID_PENDING_${idx + 2}_${cleanName
+						.replace(/[^a-zA-Z0-9]/g, '')
+						.slice(0, 10)
+						.toUpperCase()}`;
 				}
+
+				nameToIdMap.set(cleanName.toLowerCase(), cleanId);
+				validEmpIds.add(cleanId);
 
 				const joinDate = parseFlexibleDate(getCol(r, 'Join Date', 'Tanggal Masuk'));
 				const exitDate = parseFlexibleDate(getCol(r, 'Exit Date', 'Tanggal Keluar'));
 				const rawYos = getCol(r, 'Years of Services', 'Years of Service', 'Masa Kerja');
+				const jobLevel = getCol(r, 'Job Level');
+				const jobLevelBasis = getCol(r, 'Job Level Basis');
 
 				uniqueEmpMap.set(cleanId, {
 					employee_id: cleanId,
@@ -162,6 +220,8 @@ export async function processExcelImport(formData: FormData) {
 					job_title: getCol(r, 'Job Title', 'Jabatan')
 						? String(getCol(r, 'Job Title', 'Jabatan')).trim()
 						: null,
+					job_level: jobLevel ? String(jobLevel).trim() : null,
+					job_level_basis: jobLevelBasis ? String(jobLevelBasis).trim() : 'Derived',
 					department: getCol(r, 'Department', 'Departemen')
 						? String(getCol(r, 'Department', 'Departemen')).trim()
 						: null,
@@ -181,9 +241,9 @@ export async function processExcelImport(formData: FormData) {
 					probation_end_date: parseFlexibleDate(getCol(r, 'Probation End Date')),
 					probation_outcome: normalizeProbation(getCol(r, 'Probation Outcome')),
 					contract_start_date: parseFlexibleDate(getCol(r, 'Contract Start Date')),
-					contract_1_date: parseFlexibleDate(getCol(r, 'Contract (I)')),
-					contract_2_date: parseFlexibleDate(getCol(r, 'Contract (II)')),
-					contract_3_date: parseFlexibleDate(getCol(r, 'Contract (III)')),
+					contract_1_date: parseFlexibleDate(getCol(r, 'Contract (I)', 'Contract 1 Date')),
+					contract_2_date: parseFlexibleDate(getCol(r, 'Contract (II)', 'Contract 2 Date')),
+					contract_3_date: parseFlexibleDate(getCol(r, 'Contract (III)', 'Contract 3 Date')),
 					exit_date: exitDate,
 					exit_type: getCol(r, 'Exit Type') ? String(getCol(r, 'Exit Type')).trim() : null,
 					exit_reason: getCol(r, 'Exit Reason') ? String(getCol(r, 'Exit Reason')).trim() : null,
@@ -200,6 +260,211 @@ export async function processExcelImport(formData: FormData) {
 			}
 		}
 
+		// Helper resolusi Employee_ID (jika kosong atau belum terdaftar di master, gunakan pencocokan nama)
+		const resolveEmployeeId = (rawId: any, cleanName: string): string | null => {
+			const trimmedId = rawId ? String(rawId).trim() : '';
+			if (trimmedId && validEmpIds.has(trimmedId)) return trimmedId;
+			const matchedByName = nameToIdMap.get(cleanName.toLowerCase());
+			if (matchedByName && validEmpIds.has(matchedByName)) return matchedByName;
+			return null;
+		};
+
+		// 2. KPI_DATA (Sheet Granular Talent Mapping)
+		const kpiSheet = getSheet(workbook, 'KPI_Data', 'KPI Data');
+		if (kpiSheet) {
+			const rows = XLSX.utils.sheet_to_json(kpiSheet);
+			const kpiInserts: any[] = [];
+			const periodsToClear = new Set<string>();
+
+			rows.forEach((r: any, idx: number) => {
+				const rawId = getCol(r, 'Employee ID', 'ID Karyawan');
+				const rawName = getCol(r, 'Employee Name', 'Nama Karyawan', 'Full Name');
+				if (isTemplateSampleRow(rawId) || isTemplateSampleRow(rawName)) return;
+				if (!rawId && !rawName) return;
+
+				const cleanName = rawName ? String(rawName).trim() : String(rawId).trim();
+				const resolvedId = resolveEmployeeId(rawId, cleanName);
+				const period = String(getCol(r, 'KPI Period', 'Period') || '2026-Q2').trim();
+				const score = parseNum(getCol(r, 'KPI Score', 'KPI', 'Average KPI'));
+				const scoreStatus = String(getCol(r, 'Score Status', 'Status') || 'Assessed').trim();
+
+				periodsToClear.add(period);
+				kpiInserts.push({
+					employee_id: resolvedId,
+					employee_name: cleanName,
+					kpi_period: period,
+					kpi_score: score,
+					score_status: scoreStatus,
+					is_provisional: scoreStatus.toLowerCase().includes('provisional'),
+					notes: getCol(r, 'Notes', 'Remarks')
+						? String(getCol(r, 'Notes', 'Remarks')).trim()
+						: null,
+					source_file: getCol(r, 'Source File')
+						? String(getCol(r, 'Source File')).trim()
+						: file.name,
+					source_sheet: 'KPI_Data',
+					source_row: parseNum(getCol(r, 'Source Row')) ?? idx + 2,
+					updated_at: new Date().toISOString(),
+				});
+			});
+
+			if (kpiInserts.length > 0) {
+				await supabase
+					.from('talent_kpi_data')
+					.delete()
+					.in('kpi_period', Array.from(periodsToClear));
+				await withRetry(
+					'KPI_Data',
+					async () => await supabase.from('talent_kpi_data').insert(kpiInserts)
+				);
+				summary.push(`${kpiInserts.length} KPI Data`);
+			}
+		}
+
+		// 3. BEHAVIOR_ASSESSMENT (Sheet Granular 7 Dimensi)
+		const behSheet = getSheet(workbook, 'Behavior_Assessment', 'Behavior Assessment');
+		if (behSheet) {
+			const rows = XLSX.utils.sheet_to_json(behSheet);
+			const behInserts: any[] = [];
+			const periodsToClear = new Set<string>();
+
+			rows.forEach((r: any, idx: number) => {
+				const rawId = getCol(r, 'Employee ID', 'ID Karyawan');
+				const rawName = getCol(r, 'Employee Name', 'Nama Karyawan', 'Full Name');
+				if (isTemplateSampleRow(rawId) || isTemplateSampleRow(rawName)) return;
+				if (!rawId && !rawName) return;
+
+				const cleanName = rawName ? String(rawName).trim() : String(rawId).trim();
+				const resolvedId = resolveEmployeeId(rawId, cleanName);
+				const period = String(
+					getCol(r, 'Assessment Period', 'Behavior Period', 'Period') || '2026'
+				).trim();
+
+				const d1 = parseNum(getCol(r, 'Dim 1', 'Dimension 1', 'D1'));
+				const d2 = parseNum(getCol(r, 'Dim 2', 'Dimension 2', 'D2'));
+				const d3 = parseNum(getCol(r, 'Dim 3', 'Dimension 3', 'D3'));
+				const d4 = parseNum(getCol(r, 'Dim 4', 'Dimension 4', 'D4'));
+				const d5 = parseNum(getCol(r, 'Dim 5', 'Dimension 5', 'D5'));
+				const d6 = parseNum(getCol(r, 'Dim 6', 'Dimension 6', 'D6'));
+				const d7 = parseNum(getCol(r, 'Dim 7', 'Dimension 7', 'D7'));
+				const sourceOverall = parseNum(
+					getCol(r, 'Source Overall Score', 'Overall Score', 'Behavior Lead Score')
+				);
+
+				periodsToClear.add(period);
+				behInserts.push({
+					employee_id: resolvedId,
+					employee_name: cleanName,
+					assessment_period: period,
+					evaluator: getCol(r, 'Evaluator', 'Lead', 'Assessor')
+						? String(getCol(r, 'Evaluator', 'Lead', 'Assessor')).trim()
+						: null,
+					dim_1: d1,
+					dim_2: d2,
+					dim_3: d3,
+					dim_4: d4,
+					dim_5: d5,
+					dim_6: d6,
+					dim_7: d7,
+					source_overall_score: sourceOverall,
+					score_status: String(getCol(r, 'Score Status', 'Status') || 'Assessed').trim(),
+					evidence: getCol(r, 'Evidence', 'Notes')
+						? String(getCol(r, 'Evidence', 'Notes')).trim()
+						: null,
+					source_file: getCol(r, 'Source File')
+						? String(getCol(r, 'Source File')).trim()
+						: file.name,
+					source_sheet: 'Behavior_Assessment',
+					source_row: parseNum(getCol(r, 'Source Row')) ?? idx + 2,
+					updated_at: new Date().toISOString(),
+				});
+			});
+
+			if (behInserts.length > 0) {
+				await supabase
+					.from('talent_behavior_assessments')
+					.delete()
+					.in('assessment_period', Array.from(periodsToClear));
+				await withRetry(
+					'Behavior_Assessment',
+					async () => await supabase.from('talent_behavior_assessments').insert(behInserts)
+				);
+				summary.push(`${behInserts.length} Behavior Assessment`);
+			}
+		}
+
+		// 4. SKILL_MAP_DATA (Sheet Granular per Kompetensi L1-L4)
+		const skillSheet = getSheet(workbook, 'Skill_Map_Data', 'Skill Map Data');
+		if (skillSheet) {
+			const rows = XLSX.utils.sheet_to_json(skillSheet);
+			const skillInserts: any[] = [];
+			const periodsToClear = new Set<string>();
+
+			rows.forEach((r: any, idx: number) => {
+				const rawId = getCol(r, 'Employee ID', 'ID Karyawan');
+				const rawName = getCol(r, 'Employee Name', 'Nama Karyawan', 'Full Name');
+				const compName = getCol(r, 'Competency Name', 'Competency', 'Skill Name', 'Skill');
+				if (isTemplateSampleRow(rawId) || isTemplateSampleRow(rawName) || !compName) return;
+				if (!rawId && !rawName) return;
+
+				const cleanName = rawName ? String(rawName).trim() : String(rawId).trim();
+				const resolvedId = resolveEmployeeId(rawId, cleanName);
+				const period = String(
+					getCol(r, 'Assessment Period', 'Skill Period', 'Period') || '2026'
+				).trim();
+
+				const isApp = parseBool(getCol(r, 'Is Applicable', 'Applicable'), true);
+				const selfScore = parseNum(getCol(r, 'Self Score', 'Self'));
+				const leadScore = parseNum(getCol(r, 'Lead Score', 'Lead'));
+				const finalScore = parseNum(getCol(r, 'Final Score', 'Final', 'Skill Score'));
+				const targetScore = parseNum(getCol(r, 'Target Score', 'Target', 'Expected Level'));
+				const confirmed = parseBool(
+					getCol(r, 'One On One Confirmed', '1 on 1 Confirmed', 'Confirmed'),
+					false
+				);
+
+				periodsToClear.add(period);
+				skillInserts.push({
+					employee_id: resolvedId,
+					employee_name: cleanName,
+					assessment_period: period,
+					competency_name: String(compName).trim(),
+					is_applicable: isApp,
+					self_score: selfScore,
+					lead_score: leadScore,
+					final_score: finalScore,
+					target_score: targetScore,
+					one_on_one_confirmed: confirmed,
+					calibration_status: String(
+						getCol(r, 'Calibration Status', 'Score Status', 'Status') || 'Assessed'
+					).trim(),
+					evaluator: getCol(r, 'Evaluator', 'Lead')
+						? String(getCol(r, 'Evaluator', 'Lead')).trim()
+						: null,
+					notes: getCol(r, 'Notes') ? String(getCol(r, 'Notes')).trim() : null,
+					source_file: getCol(r, 'Source File')
+						? String(getCol(r, 'Source File')).trim()
+						: file.name,
+					source_sheet: 'Skill_Map_Data',
+					source_row: parseNum(getCol(r, 'Source Row')) ?? idx + 2,
+					updated_at: new Date().toISOString(),
+				});
+			});
+
+			if (skillInserts.length > 0) {
+				await supabase
+					.from('talent_skill_map_data')
+					.delete()
+					.in('assessment_period', Array.from(periodsToClear));
+				await withRetry(
+					'Skill_Map_Data',
+					async () => await supabase.from('talent_skill_map_data').insert(skillInserts)
+				);
+				summary.push(`${skillInserts.length} Kompetensi Skill Map`);
+			}
+		}
+
+		// 5. SHEET OPERASIONAL HR LAINNYA (Requisition, Recruitment, Performance, Training, Survey, Exit)
 		if (workbook.Sheets['Requisition Summary']) {
 			const rows = XLSX.utils.sheet_to_json(workbook.Sheets['Requisition Summary']);
 			const uniqueReqMap = new Map<string, any>();
@@ -411,73 +676,16 @@ export async function processExcelImport(formData: FormData) {
 			}
 		}
 
-		if (workbook.Sheets['Talent Mapping Pilot']) {
-			const rows = XLSX.utils.sheet_to_json(workbook.Sheets['Talent Mapping Pilot']);
-			const uniqueTalentMap = new Map<string, any>();
-
-			rows.forEach((r: any) => {
-				const id = getCol(r, 'Employee ID', 'ID Karyawan');
-				if (!id || isTemplateSampleRow(id)) return;
-				const cleanId = String(id).trim();
-
-				const rawKpi = getCol(
-					r,
-					'Current-Month KPI (1-100%)',
-					'Current-Month KPI',
-					'KPI Bulan Berjalan'
-				);
-				const rawBeh = getCol(
-					r,
-					'Behavior Lead Score (1-5)',
-					'Behavior Lead Score',
-					'Behavior Score'
-				);
-				const rawSkill = getCol(r, 'Skill Map Score (1-5)', 'Skill Map Score', 'Skill Map');
-
-				const parseNum = (v: any) => {
-					if (v === null || v === undefined || String(v).trim() === '') return null;
-					const n = Number(String(v).replace('%', '').trim());
-					return isNaN(n) ? null : n;
-				};
-
-				uniqueTalentMap.set(cleanId, {
-					employee_id: cleanId,
-					kpi_current_month: parseNum(rawKpi),
-					kpi_period: getCol(r, 'KPI Period') ? String(getCol(r, 'KPI Period')).trim() : null,
-					behavior_lead_score: parseNum(rawBeh),
-					behavior_period: getCol(r, 'Behavior Period')
-						? String(getCol(r, 'Behavior Period')).trim()
-						: null,
-					behavior_evaluator: getCol(r, 'Behavior Evaluator')
-						? String(getCol(r, 'Behavior Evaluator')).trim()
-						: null,
-					skill_map_score: parseNum(rawSkill),
-					skill_level: getCol(r, 'Skill Level') ? String(getCol(r, 'Skill Level')).trim() : null,
-					skill_period: getCol(r, 'Skill Period') ? String(getCol(r, 'Skill Period')).trim() : null,
-					updated_at: new Date().toISOString(),
-				});
-			});
-
-			const data = Array.from(uniqueTalentMap.values());
-			if (data.length > 0) {
-				await withRetry(
-					'Talent Mapping Pilot',
-					async () =>
-						await supabase.from('talent_assessments').upsert(data, {onConflict: 'employee_id'})
-				);
-				summary.push(`${data.length} Talent Assessment`);
-			}
-		}
-
 		if (summary.length === 0) {
 			throw new Error(
 				'Tidak ada baris data baru di luar baris CONTOH_ atau nama sheet tidak sesuai.'
 			);
 		}
 
+		revalidatePath('/');
 		return {
 			success: true,
-			message: `✅ Berhasil sinkronisasi & update data: ${summary.join(', ')}! (Data lama aman & data kembar otomatis di-overwrite)`,
+			message: `✅ Berhasil sinkronisasi & update data: ${summary.join(', ')}!`,
 		};
 	} catch (error: any) {
 		console.error('Server Action Error:', error);

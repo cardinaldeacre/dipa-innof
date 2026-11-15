@@ -37,42 +37,6 @@ const DROPDOWN_ENUMS: Record<string, Record<string, string[]>> = {
 			'Other',
 		],
 	},
-	Employee_Master: {
-		Status: ['Active', 'Inactive'],
-		Employee_Status: ['Permanent', 'Contract', 'Probation', 'Internship'],
-		Employment_Type: ['Full-time', 'Part-time', 'Contract', 'Internship'],
-		Job_Level: [
-			'Intern',
-			'Junior Staff',
-			'Staff',
-			'Senior Staff',
-			'Junior Lead',
-			'Senior Lead',
-			'Needs Confirmation',
-		],
-		Job_Level_Basis: ['Derived', 'Confirmed by P&C', 'Needs Confirmation'],
-		Gender: ['Male', 'Female'],
-		Probation_Outcome: ['Passed', 'Failed', 'Pending', 'Not Applicable'],
-		Exit_Type: [
-			'Voluntary',
-			'Involuntary',
-			'Contract Non Renewal',
-			'Probation Non Continuation',
-			'Other',
-			'Intern Non Continuation',
-		],
-		Exit_Reason: [
-			'Compensation',
-			'Growth',
-			'Role',
-			'Management',
-			'Workload',
-			'Culture',
-			'External Opportunity',
-			'Personal',
-			'Other',
-		],
-	},
 	KPI_Data: {
 		Score_Status: [
 			'Assessed',
@@ -147,10 +111,245 @@ const DROPDOWN_ENUMS: Record<string, Record<string, string[]>> = {
 	},
 };
 
-async function buildAndDownloadWorkbook(sheetsConfig: Record<string, any[]>, fileName: string) {
+export async function downloadSmartTemplate() {
 	const wb = new ExcelJS.Workbook();
 	wb.creator = 'Dipa Inhouse People Analytics';
 	wb.created = new Date();
+
+	const guideData = [
+		{
+			'Nama Sheet': 'UMUM (Semua Sheet)',
+			'Nama Kolom': 'Kolom Ber-Dropdown (Enum)',
+			'Aturan / Nilai yang Diizinkan':
+				'Klik panah dropdown di sel Excel untuk memilih opsi, atau ketik manual jika ada kategori baru.',
+			Keterangan: 'Dropdown sudah terpasang otomatis dari baris 2 hingga baris 500.',
+		},
+		{
+			'Nama Sheet': 'UMUM (Semua Sheet)',
+			'Nama Kolom': 'Semua Kolom Tanggal',
+			'Aturan / Nilai yang Diizinkan': 'Gunakan format YYYY-MM-DD (Contoh: 2026-01-15)',
+			Keterangan: 'Pastikan Exit Date tidak lebih awal dari Join Date.',
+		},
+		{
+			'Nama Sheet': 'UMUM (Semua Sheet)',
+			'Nama Kolom': 'Baris Contoh (CONTOH_...)',
+			'Aturan / Nilai yang Diizinkan': 'Boleh dihapus atau dibiarkan',
+			Keterangan: 'Sistem otomatis mengabaikan baris yang diawali kata CONTOH_ saat di-upload.',
+		},
+		{
+			'Nama Sheet': 'Employee Master',
+			'Nama Kolom': 'Status, Employee Status, & Job Level',
+			'Aturan / Nilai yang Diizinkan':
+				'Status: Active | Inactive • Employee Status: Permanent | Contract | Probation | Internship • Job Level: Intern | Junior Staff | Staff | Senior Staff | Junior Lead | Senior Lead',
+			Keterangan: 'Jika Exit Date diisi, sistem otomatis mengubah Status menjadi Inactive.',
+		},
+		{
+			'Nama Sheet': 'KPI_Data',
+			'Nama Kolom': 'KPI_Period & KPI_Score',
+			'Aturan / Nilai yang Diizinkan':
+				'Periode kuartalan YYYY-Q1 s/d YYYY-Q4 (Contoh: 2026-Q2). Nilai maksimal 100.',
+			Keterangan: 'Intern otomatis berstatus Not Applicable dan dikeluarkan dari denominator KPI.',
+		},
+		{
+			'Nama Sheet': 'Behavior_Assessment',
+			'Nama Kolom': 'Dim_1 s/d Dim_7 (Skala 1-5)',
+			'Aturan / Nilai yang Diizinkan':
+				'7 dimensi perilaku dengan skala 1 sampai 5, periode tahunan (Contoh: 2026).',
+			Keterangan: 'Skor Behavior dihitung otomatis oleh sistem jika ke-7 dimensi terisi lengkap.',
+		},
+		{
+			'Nama Sheet': 'Skill_Map_Data',
+			'Nama Kolom': 'Self_Score, Lead_Score, Final_Score, Target_Score',
+			'Aturan / Nilai yang Diizinkan':
+				'Skor level kompetensi L1-L4 ditulis angka 1 sampai 4 per baris kompetensi.',
+			Keterangan:
+				'Jika selisih |Self - Lead| >= 2 dan belum dikonfirmasi 1-on-1, otomatis berstatus Pending Calibration.',
+		},
+	];
+
+	const sheetsConfig: Record<string, any[]> = {
+		'📋 Panduan & Kamus Data': guideData,
+		'Employee Master': [
+			{
+				'Employee ID': 'CONTOH_DP2601001',
+				'Employee Name': 'CONTOH_Budi Santoso (Aktif)',
+				'Job Title': 'UI/UX Designer',
+				'Job Level': 'Staff',
+				'Job Level Basis': 'Derived',
+				Department: 'Design',
+				Status: 'Active',
+				'Employee Status': 'Permanent',
+				'Employment Type': 'Full-time',
+				Gender: 'Male',
+				'Join Date': '2026-01-15',
+				'Years of Services': 0.8,
+				'Probation Start Date': '2026-01-15',
+				'Probation End Date': '2026-04-15',
+				'Probation Outcome': 'Passed',
+				'Contract Start Date': '2026-04-16',
+				'Contract (I)': '',
+				'Contract (II)': '',
+				'Contract (III)': '',
+				'Exit Date': '',
+				'Exit Type': '',
+				'Exit Reason': '',
+			},
+			{
+				'Employee ID': 'CONTOH_DP2502002',
+				'Employee Name': 'CONTOH_Siti Aminah (Resign)',
+				'Job Title': 'Frontend Developer',
+				'Job Level': 'Staff',
+				'Job Level Basis': 'Derived',
+				Department: 'Development',
+				Status: 'Inactive',
+				'Employee Status': 'Contract',
+				'Employment Type': 'Full-time',
+				Gender: 'Female',
+				'Join Date': '2025-02-01',
+				'Years of Services': 1.2,
+				'Probation Start Date': '2025-02-01',
+				'Probation End Date': '2025-05-01',
+				'Probation Outcome': 'Passed',
+				'Contract Start Date': '2025-05-02',
+				'Contract (I)': '2026-05-02',
+				'Contract (II)': '',
+				'Contract (III)': '',
+				'Exit Date': '2026-04-20',
+				'Exit Type': 'Voluntary',
+				'Exit Reason': 'Growth',
+			},
+		],
+		KPI_Data: [
+			{
+				Employee_ID: 'CONTOH_DP2601001',
+				Employee_Name: 'CONTOH_Budi Santoso (Aktif)',
+				KPI_Period: '2026-Q2',
+				KPI_Score: 92,
+				Score_Status: 'Assessed',
+				Notes: 'Contoh KPI Kuartalan',
+				Source_File: '',
+				Source_Sheet: 'KPI_Data',
+				Source_Row: 2,
+			},
+		],
+		Behavior_Assessment: [
+			{
+				Employee_ID: 'CONTOH_DP2601001',
+				Employee_Name: 'CONTOH_Budi Santoso (Aktif)',
+				Assessment_Period: '2026',
+				Evaluator: 'Rakha Labib Ramadhan',
+				Dim_1: 4,
+				Dim_2: 4,
+				Dim_3: 5,
+				Dim_4: 4,
+				Dim_5: 4,
+				Dim_6: 4,
+				Dim_7: 4,
+				Score_Status: 'Assessed',
+				Evidence: 'Konsisten memimpin design review & handoff tepat waktu.',
+				Source_File: '',
+				Source_Sheet: 'Behavior_Assessment',
+				Source_Row: 2,
+			},
+		],
+		Skill_Map_Data: [
+			{
+				Employee_ID: 'CONTOH_DP2601001',
+				Employee_Name: 'CONTOH_Budi Santoso (Aktif)',
+				Assessment_Period: '2026',
+				Competency_Name: 'User Research & Synthesis',
+				Is_Applicable: 'TRUE',
+				Self_Score: 3,
+				Lead_Score: 3,
+				Final_Score: 3,
+				Target_Score: 3,
+				One_On_One_Confirmed: 'TRUE',
+				Calibration_Status: 'Assessed',
+				Evaluator: 'Rakha Labib Ramadhan',
+				Source_File: '',
+				Source_Sheet: 'Skill_Map_Data',
+				Source_Row: 2,
+			},
+			{
+				Employee_ID: 'CONTOH_DP2601001',
+				Employee_Name: 'CONTOH_Budi Santoso (Aktif)',
+				Assessment_Period: '2026',
+				Competency_Name: 'Interaction & Visual Design',
+				Is_Applicable: 'TRUE',
+				Self_Score: 4,
+				Lead_Score: 3,
+				Final_Score: 4,
+				Target_Score: 3,
+				One_On_One_Confirmed: 'TRUE',
+				Calibration_Status: 'Calibrated',
+				Evaluator: 'Rakha Labib Ramadhan',
+				Source_File: '',
+				Source_Sheet: 'Skill_Map_Data',
+				Source_Row: 3,
+			},
+		],
+		'Requisition Summary': [
+			{
+				'Requisition ID': 'CONTOH_REQ001',
+				Department: 'Design',
+				Position: 'UI/UX Designer',
+				Status: 'Open',
+			},
+		],
+		'Recruitment Database': [
+			{
+				'Requisition ID': 'CONTOH_REQ001',
+				Department: 'Design',
+				Position: 'UI/UX Designer',
+				Candidate: 'CONTOH_Andi Wijaya',
+				'Source Channel': 'LinkedIn',
+				Stage: 'Hired',
+				'Applied Date': '2026-02-01',
+				'Offer Date': '2026-02-15',
+				'Accepted Date': '2026-02-18',
+				'Time to Hire (Days)': 17,
+			},
+		],
+		'Performance Database': [
+			{
+				'Employee ID': 'CONTOH_DP2601001',
+				Department: 'Design',
+				'Review Period': '2026-H1',
+				'KPI Score': 4.2,
+				Rating: 'Exceeds Expectations',
+			},
+		],
+		'Training Database': [
+			{
+				'Employee ID': 'CONTOH_DP2601001',
+				Department: 'Design',
+				Course: 'Advanced Figma System',
+				Status: 'Completed',
+				Hours: 12,
+				'Completion Date': '2026-03-10',
+			},
+		],
+		'Engagement Survey Database': [
+			{
+				'Survey Wave': 'CONTOH_2026-Q1',
+				Department: 'Design',
+				Dimension: 'Work-Life Balance',
+				'Score (1-5)': 4.5,
+				Respondents: 10,
+			},
+		],
+		'Exit Interview Database': [
+			{
+				'Employee ID': 'CONTOH_DP2502002',
+				Department: 'Development',
+				'Last Working Day': '2026-04-20',
+				'Exit Type': 'Voluntary',
+				Reason: 'Growth',
+				'Tenure (Months)': 14.5,
+				'Regrettable Loss': 'Yes',
+			},
+		],
+	};
 
 	for (const [sheetName, rows] of Object.entries(sheetsConfig)) {
 		const ws = wb.addWorksheet(sheetName, {
@@ -160,7 +359,7 @@ async function buildAndDownloadWorkbook(sheetsConfig: Record<string, any[]>, fil
 		if (rows.length === 0) continue;
 
 		const headers = Object.keys(rows[0]);
-		const isGuide = sheetName.includes('Panduan') || sheetName.includes('Guidance');
+		const isGuide = sheetName.includes('Panduan');
 
 		ws.columns = headers.map((header) => {
 			const maxLen = rows.reduce((max, r) => {
@@ -246,307 +445,9 @@ async function buildAndDownloadWorkbook(sheetsConfig: Record<string, any[]>, fil
 	const url = window.URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
-	a.download = fileName;
+	a.download = 'Template_People_Analytics_Dipa.xlsx';
 	document.body.appendChild(a);
 	a.click();
 	document.body.removeChild(a);
 	window.URL.revokeObjectURL(url);
-}
-
-/**
- * Generator khusus Workbook v2 (4 Sheet Import Terpisah untuk Talent Mapping Revisi 2):
- * Employee_Master, KPI_Data, Behavior_Assessment, Skill_Map_Data
- */
-export async function downloadTalentMappingV2Template() {
-	const sheetsConfig: Record<string, any[]> = {
-		'📋 Guidance Revisi 2': [
-			{
-				Sheet: 'Employee_Master',
-				Aturan: 'Master referensi seluruh karyawan. Mendukung Job_Level & Job_Level_Basis.',
-				Catatan:
-					'Employee_ID boleh kosong sementara pada sheet KPI/Behavior/Skill (dicocokkan via Employee_Name).',
-			},
-			{
-				Sheet: 'KPI_Data',
-				Aturan: 'KPI Kuartalan (YYYY-Q1 s/d YYYY-Q4), nilai 0-100 (di atas 100 invalid).',
-				Catatan: 'Intern otomatis berstatus Not Applicable dan dikeluarkan dari denominator KPI.',
-			},
-			{
-				Sheet: 'Behavior_Assessment',
-				Aturan: 'Granular 7 dimensi skala 1-5, periode tahunan (2026), evaluator & evidence.',
-				Catatan: 'Wajib lengkap 7 dimensi untuk menghasilkan skor (rata-rata / 5 * 100).',
-			},
-			{
-				Sheet: 'Skill_Map_Data',
-				Aturan: 'Granular per kompetensi level L1-L4 (angka 1-4): Self, Lead, Final, Target.',
-				Catatan:
-					'Jika |Self - Lead| >= 2 dan One_On_One_Confirmed = FALSE, otomatis menjadi Pending Calibration.',
-			},
-		],
-		Employee_Master: [
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso',
-				Job_Title: 'UI/UX Designer',
-				Job_Level: 'Staff',
-				Job_Level_Basis: 'Derived',
-				Department: 'UI/UX Design',
-				Status: 'Active',
-				Employee_Status: 'Permanent',
-				Employment_Type: 'Full-time',
-				Gender: 'Male',
-				Join_Date: '2026-01-15',
-				Years_of_Service: 0.8,
-				Probation_Start_Date: '2026-01-15',
-				Probation_End_Date: '2026-04-15',
-				Probation_Outcome: 'Passed',
-				Contract_Start_Date: '2026-04-16',
-				Exit_Date: '',
-				Exit_Type: '',
-				Exit_Reason: '',
-			},
-		],
-		KPI_Data: [
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso',
-				KPI_Period: '2026-Q2',
-				KPI_Score: 92,
-				Score_Status: 'Assessed',
-				Notes: 'Pilot cohort UI/UX Design Q2',
-				Source_File: 'KPI_UIUX_2026Q2.xlsx',
-				Source_Sheet: 'KPI_Data',
-				Source_Row: 2,
-			},
-		],
-		Behavior_Assessment: [
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso',
-				Assessment_Period: '2026',
-				Evaluator: 'Rakha Labib Ramadhan',
-				Dim_1: 4,
-				Dim_2: 4,
-				Dim_3: 5,
-				Dim_4: 4,
-				Dim_5: 4,
-				Dim_6: 4,
-				Dim_7: 4,
-				Score_Status: 'Assessed',
-				Evidence: 'Konsisten memimpin design review & handoff tepat waktu.',
-				Source_File: 'Behavior_UIUX_2026.xlsx',
-				Source_Sheet: 'Behavior_Assessment',
-				Source_Row: 2,
-			},
-		],
-		Skill_Map_Data: [
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso',
-				Assessment_Period: '2026',
-				Competency_Name: 'User Research & Synthesis',
-				Is_Applicable: 'TRUE',
-				Self_Score: 3,
-				Lead_Score: 3,
-				Final_Score: 3,
-				Target_Score: 3,
-				One_On_One_Confirmed: 'TRUE',
-				Calibration_Status: 'Assessed',
-				Evaluator: 'Rakha Labib Ramadhan',
-				Source_File: 'SkillMap_UIUX_2026.xlsx',
-				Source_Sheet: 'Skill_Map_Data',
-				Source_Row: 2,
-			},
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso',
-				Assessment_Period: '2026',
-				Competency_Name: 'Interaction & Visual Design',
-				Is_Applicable: 'TRUE',
-				Self_Score: 4,
-				Lead_Score: 3,
-				Final_Score: 4,
-				Target_Score: 3,
-				One_On_One_Confirmed: 'TRUE',
-				Calibration_Status: 'Calibrated',
-				Evaluator: 'Rakha Labib Ramadhan',
-				Source_File: 'SkillMap_UIUX_2026.xlsx',
-				Source_Sheet: 'Skill_Map_Data',
-				Source_Row: 3,
-			},
-		],
-	};
-
-	await buildAndDownloadWorkbook(
-		sheetsConfig,
-		'Dipa_People_Analytics_v2_Talent_Mapping_Template.xlsx'
-	);
-}
-
-export async function downloadSmartTemplate() {
-	const guideData = [
-		{
-			'Nama Sheet': 'UMUM (Semua Sheet)',
-			'Nama Kolom': 'Kolom Ber-Dropdown (Enum)',
-			'Aturan / Nilai yang Diizinkan':
-				'Klik panah dropdown di sel Excel untuk memilih opsi, atau ketik manual jika ada kategori baru.',
-			Keterangan: 'Dropdown sudah terpasang otomatis dari baris 2 hingga baris 500.',
-		},
-		{
-			'Nama Sheet': 'UMUM (Semua Sheet)',
-			'Nama Kolom': 'Semua Kolom Tanggal',
-			'Aturan / Nilai yang Diizinkan': 'Gunakan format YYYY-MM-DD (Contoh: 2026-01-15)',
-			Keterangan: 'Pastikan Exit Date tidak lebih awal dari Join Date.',
-		},
-		{
-			'Nama Sheet': 'UMUM (Semua Sheet)',
-			'Nama Kolom': 'Baris Contoh (CONTOH_...)',
-			'Aturan / Nilai yang Diizinkan': 'Boleh dihapus atau dibiarkan',
-			Keterangan: 'Sistem otomatis mengabaikan baris yang diawali kata CONTOH_ saat di-upload.',
-		},
-		{
-			'Nama Sheet': 'Talent Mapping Revisi 2 (4 Sheet)',
-			'Nama Kolom': 'KPI_Data, Behavior_Assessment, Skill_Map_Data',
-			'Aturan / Nilai yang Diizinkan':
-				'Mendukung Employee_ID kosong sementara (dicocokkan via Nama Lengkap sama persis).',
-			Keterangan:
-				'Gunakan sheet KPI_Data, Behavior_Assessment, dan Skill_Map_Data untuk data granular Revisi 2.',
-		},
-	];
-
-	const sheetsConfig: Record<string, any[]> = {
-		'📋 Panduan & Kamus Data': guideData,
-		'Employee Master': [
-			{
-				'Employee ID': 'CONTOH_DP2601001',
-				'Employee Name': 'CONTOH_Budi Santoso (Aktif)',
-				'Job Title': 'UI/UX Designer',
-				'Job Level': 'Staff',
-				'Job Level Basis': 'Derived',
-				Department: 'Design',
-				Status: 'Active',
-				'Employee Status': 'Permanent',
-				'Employment Type': 'Full-time',
-				Gender: 'Male',
-				'Join Date': '2026-01-15',
-				'Years of Services': 0.8,
-				'Probation Start Date': '2026-01-15',
-				'Probation End Date': '2026-04-15',
-				'Probation Outcome': 'Passed',
-				'Contract Start Date': '2026-04-16',
-				'Contract (I)': '',
-				'Contract (II)': '',
-				'Contract (III)': '',
-				'Exit Date': '',
-				'Exit Type': '',
-				'Exit Reason': '',
-			},
-		],
-		KPI_Data: [
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso (Aktif)',
-				KPI_Period: '2026-Q2',
-				KPI_Score: 92,
-				Score_Status: 'Assessed',
-				Notes: 'Contoh KPI Kuartalan',
-			},
-		],
-		Behavior_Assessment: [
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso (Aktif)',
-				Assessment_Period: '2026',
-				Evaluator: 'Rakha Labib Ramadhan',
-				Dim_1: 4,
-				Dim_2: 4,
-				Dim_3: 5,
-				Dim_4: 4,
-				Dim_5: 4,
-				Dim_6: 4,
-				Dim_7: 4,
-				Score_Status: 'Assessed',
-				Evidence: 'Contoh 7 dimensi lengkap',
-			},
-		],
-		Skill_Map_Data: [
-			{
-				Employee_ID: 'CONTOH_DP2601001',
-				Employee_Name: 'CONTOH_Budi Santoso (Aktif)',
-				Assessment_Period: '2026',
-				Competency_Name: 'Interaction Design',
-				Is_Applicable: 'TRUE',
-				Self_Score: 3,
-				Lead_Score: 3,
-				Final_Score: 3,
-				Target_Score: 3,
-				One_On_One_Confirmed: 'TRUE',
-				Calibration_Status: 'Assessed',
-				Evaluator: 'Rakha Labib Ramadhan',
-			},
-		],
-		'Requisition Summary': [
-			{
-				'Requisition ID': 'CONTOH_REQ001',
-				Department: 'Design',
-				Position: 'UI/UX Designer',
-				Status: 'Open',
-			},
-		],
-		'Recruitment Database': [
-			{
-				'Requisition ID': 'CONTOH_REQ001',
-				Department: 'Design',
-				Position: 'UI/UX Designer',
-				Candidate: 'CONTOH_Andi Wijaya',
-				'Source Channel': 'LinkedIn',
-				Stage: 'Hired',
-				'Applied Date': '2026-02-01',
-				'Offer Date': '2026-02-15',
-				'Accepted Date': '2026-02-18',
-				'Time to Hire (Days)': 17,
-			},
-		],
-		'Performance Database': [
-			{
-				'Employee ID': 'CONTOH_DP2601001',
-				Department: 'Design',
-				'Review Period': '2026-H1',
-				'KPI Score': 4.2,
-				Rating: 'Exceeds Expectations',
-			},
-		],
-		'Training Database': [
-			{
-				'Employee ID': 'CONTOH_DP2601001',
-				Department: 'Design',
-				Course: 'Advanced Figma System',
-				Status: 'Completed',
-				Hours: 12,
-				'Completion Date': '2026-03-10',
-			},
-		],
-		'Engagement Survey Database': [
-			{
-				'Survey Wave': 'CONTOH_2026-Q1',
-				Department: 'Design',
-				Dimension: 'Work-Life Balance',
-				'Score (1-5)': 4.5,
-				Respondents: 10,
-			},
-		],
-		'Exit Interview Database': [
-			{
-				'Employee ID': 'CONTOH_DP2502002',
-				Department: 'Development',
-				'Last Working Day': '2026-04-20',
-				'Exit Type': 'Voluntary',
-				Reason: 'Growth',
-				'Tenure (Months)': 14.5,
-				'Regrettable Loss': 'Yes',
-			},
-		],
-	};
-
-	await buildAndDownloadWorkbook(sheetsConfig, 'Template_People_Analytics_Dipa.xlsx');
 }
